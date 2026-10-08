@@ -1,0 +1,23 @@
+# Local recovery material, including unrelated documents and old outputs
+/archive/
+
+# Generated analysis and UI-preview files
+/results/
+/app_preview/
+/development/previews/
+*_colonies.xlsx
+*_annotated.png
+
+# OS/editor/MATLAB temporary files
+.DS_Store
+._*
+*.asv
+*.m~
+*.autosave
+slprj/
+codegen/
+
+# Credentials and local configuration
+.env
+.env.*
+!.env.example

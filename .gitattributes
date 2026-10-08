@@ -1,0 +1,12 @@
+# Consistent text line endings; preserve images and archives byte-for-byte.
+* text=auto
+*.m text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.html text eol=lf
+*.HEIC binary
+*.heic binary
+*.jpeg binary
+*.jpg binary
+*.png binary
+*.zip binary
