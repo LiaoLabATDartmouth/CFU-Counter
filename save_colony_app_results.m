@@ -1,7 +1,8 @@
-function files=save_colony_app_results(result,folder)
+function files=save_colony_app_results(result,folder,state)
 %SAVE_COLONY_APP_RESULTS Save exactly one Excel workbook and one annotated PNG.
 % Writes directly into an existing folder; filenames inherit the image stem.
 % Repeated saves use the same numeric suffix for both files, without overwrite.
+if nargin<3, state=struct(); end
 if nargin<2 || strlength(string(folder))==0
     folder=fileparts(char(result.ImageFile));
     if isempty(folder), folder=pwd; end
@@ -50,6 +51,7 @@ if isfield(result,'EstimationInfo') && isfield(result.EstimationInfo,'Method')
         workbook,'Sheet','Summary','Range','A28','UseExcel',false);
 end
 format_colony_workbook(workbook,colonies,summary);
+write_colony_session(workbook,snapshot,state);
 % Always include all current labels and IDs, independent of app display filters.
 fig=plot_colonies(snapshot,true,'off'); closeFig=onCleanup(@()close(fig));
 exportgraphics(fig,annotated,'Resolution',240); clear closeFig

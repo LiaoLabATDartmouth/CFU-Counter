@@ -60,6 +60,8 @@ classdef ColonyCounterApp < matlab.apps.AppBase
         MarkingCounts
         ImageStartingOptions = []
         ManualParameterNames = {}
+        ResumeLease = []
+        ResultsFolder = ""
     end
     methods
         function app=ColonyCounterApp(imageFile,visibility)
@@ -80,6 +82,9 @@ classdef ColonyCounterApp < matlab.apps.AppBase
             if app.Busy || strlength(app.MarkingMode)>0, return; end
             I=read_plate_image(file);
             app.clearBoundary();
+            if string(file)~=app.ImageFile
+                app.ResumeLease=[]; app.ResultsFolder="";
+            end
             app.ImageFile=string(file); app.Result=[]; app.SelectedID=[];
             app.Options=colony_defaults(); app.ManualParameterNames={};
             app.ImageStartingOptions=[]; app.EstimationInfo=[];
@@ -94,6 +99,49 @@ classdef ColonyCounterApp < matlab.apps.AppBase
             % The pilot already located a plate. Display its locked outline
             % before classification, and use this same ellipse for editing/fit.
             app.drawImage(false); app.configureEnable();
+        end
+
+        function loadResults(app,workbook,imageFile)
+            % Restore only after the entire workbook has passed validation.
+            if nargin<3, imageFile=""; end
+            app.requireNoMarking();
+            if app.Busy, error('CFU:Busy','Wait for the current operation to finish.'); end
+            app.Busy=true; app.configureEnable();
+            cleanup=onCleanup(@()app.finishBusy()); %#ok<NASGU>
+            try
+                [result,state,lease]=load_colony_app_results(workbook,imageFile);
+                starting=result.Options; manual={}; estimation=[];
+                if isfield(state,'ImageStartingOptions'), starting=state.ImageStartingOptions; end
+                if isfield(state,'ManualParameterNames'), manual=state.ManualParameterNames; end
+                if isfield(result,'EstimationInfo'), estimation=result.EstimationInfo; end
+                % Check UI values before replacing any open work.
+                for n=1:numel(app.Schema)
+                    spec=app.Schema(n);
+                    validateattributes(result.Options.(spec.Name),{'numeric'}, ...
+                        {'scalar','finite','>=',spec.Minimum,'<=',spec.Maximum});
+                    if ~isempty(starting)
+                        validateattributes(starting.(spec.Name),{'numeric'}, ...
+                            {'scalar','finite','>=',spec.Minimum,'<=',spec.Maximum});
+                    end
+                end
+                for field={'SplitTouchingColonies','ResolveAmbiguousClassification'}
+                    validateattributes(result.Options.(field{1}),{'logical','numeric'},{'scalar','binary'});
+                end
+                app.clearBoundary();
+                app.ResumeLease=lease; app.ResultsFolder=string(fileparts(workbook));
+                app.Result=result; app.ImageFile=result.ImageFile; app.Options=result.Options;
+                app.ImageData=result.Image; app.DisplayScale=result.Scale;
+                app.ImageStartingOptions=starting; app.ManualParameterNames=manual;
+                app.EstimationInfo=estimation; app.Dirty=false; app.LastError=[]; app.SelectedID=[];
+                app.ReviewOnly.Value=false; app.ShowCircles.Value=true;
+                [~,name,ext]=fileparts(result.ImageFile); app.ImageLabel.Text=string(name)+string(ext);
+                app.syncControls(); app.refreshCounts(); app.refreshTable(); app.drawImage(false);
+                app.setStatus(state.Message);
+            catch err
+                app.LastError=err;
+                app.setStatus(['Could not open saved results: ' err.message],true);
+                rethrow(err);
+            end
         end
 
         function setParameter(app,name,value)
@@ -399,7 +447,9 @@ classdef ColonyCounterApp < matlab.apps.AppBase
             cleanup=onCleanup(@()app.finishBusy()); %#ok<NASGU>
             app.setStatus('Saving the workbook and annotated image...'); drawnow;
             try
-                files=save_colony_app_results(app.Result,folder);
+                state=struct('ImageStartingOptions',app.ImageStartingOptions, ...
+                    'ManualParameterNames',{app.ManualParameterNames});
+                files=save_colony_app_results(app.Result,folder,state);
             catch err
                 app.setStatus(['Could not save results: ' err.message],true);
                 rethrow(err);
@@ -414,6 +464,7 @@ classdef ColonyCounterApp < matlab.apps.AppBase
         end
 
         function delete(app)
+            app.ResumeLease=[];
             if ~isempty(app.MarkingFigure) && isgraphics(app.MarkingFigure), delete(app.MarkingFigure); end
             if ~isempty(app.UIFigure) && isgraphics(app.UIFigure), delete(app.UIFigure); end
         end
@@ -580,8 +631,12 @@ classdef ColonyCounterApp < matlab.apps.AppBase
             titleGrid=uigridlayout(header,[2 1],'RowHeight',{30,22},'Padding',[0 0 0 0],'RowSpacing',0);
             uilabel(titleGrid,'Text','Colony Counter','FontSize',25,'FontWeight','bold','FontColor',ink);
             uilabel(titleGrid,'Text','AD9 / AD24  ·  Detect, classify and review your plate','FontSize',12,'FontColor',[0.4 0.45 0.52]);
-            app.ImageLabel=uilabel(header,'Text','Open an image to begin','HorizontalAlignment','right', ...
+            fileHeader=uigridlayout(header,[1 2],'ColumnWidth',{'1x',146},'Padding',[0 0 0 0]);
+            app.ImageLabel=uilabel(fileHeader,'Text','Open an image to begin','HorizontalAlignment','right', ...
                 'FontSize',12,'FontColor',[0.4 0.45 0.52],'WordWrap','on');
+            app.Buttons.LoadResults=uibutton(fileHeader,'Text','Open saved results', ...
+                'ButtonPushedFcn',@(~,~)app.openResultsDialog(), ...
+                'Tooltip','Open a colonies.xlsx workbook and continue reviewing saved work.');
 
             imagePanel=uipanel(root,'BackgroundColor','w','BorderType','line');
             imagePanel.Layout.Row=2; imagePanel.Layout.Column=1;
@@ -1090,8 +1145,32 @@ classdef ColonyCounterApp < matlab.apps.AppBase
             end
         end
 
+        function openResultsDialog(app)
+            [file,folder]=uigetfile('*.xlsx','Open saved colony results');
+            if isequal(file,0), return; end
+            workbook=fullfile(folder,file);
+            try
+                app.loadResults(workbook);
+            catch err
+                if strcmp(err.identifier,'CFU:OriginalImageRequired')
+                    [photo,path]=uigetfile({'*.png;*.jpg;*.jpeg;*.tif;*.tiff;*.bmp;*.heic;*.heif','Original plate photo'; ...
+                        '*.*','All files'},err.message,folder);
+                    if isequal(photo,0), return; end
+                    try
+                        app.loadResults(workbook,fullfile(path,photo));
+                    catch retry
+                        uialert(app.UIFigure,retry.message,'Could not open saved results');
+                    end
+                else
+                    uialert(app.UIFigure,err.message,'Could not open saved results');
+                end
+            end
+        end
+
         function saveDialog(app)
-            folder=uigetdir(fileparts(char(app.ImageFile)),'Save the Excel workbook and annotated PNG here');
+            startFolder=fileparts(char(app.ImageFile));
+            if strlength(app.ResultsFolder)>0, startFolder=char(app.ResultsFolder); end
+            folder=uigetdir(startFolder,'Save the Excel workbook and annotated PNG here');
             if isequal(folder,0), return; end
             try
                 app.saveResults(folder);

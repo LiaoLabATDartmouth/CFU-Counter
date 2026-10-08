@@ -13,6 +13,8 @@ MATLAB Compiler, or internet connection is needed to run it.
    a merged object and **Add missed colony** for an undetected colony.
 5. **Save results** writes `<image>_colonies.xlsx` and `<image>_annotated.png`
    directly into the folder you choose. It creates no per-image folder.
+6. To continue later, click **Open saved results** and select the saved `.xlsx`.
+   New workbooks contain the photo and review state; older ones may ask for the original photo.
 
 See [README_APP.md](README_APP.md) for the full guide.
 

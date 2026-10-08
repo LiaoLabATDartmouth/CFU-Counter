@@ -148,12 +148,45 @@ reports corrections that could not be retained; review the new detections.
 
 These files do not depend on the current zoom or Review only filter. Existing
 files are never overwritten: both names receive the same `_2`, `_3`, etc.
-suffix when needed. The ZIP, CSV files, masks, MAT data and diagnostic images
-are not created by saving results.
+suffix when needed. No separate ZIP, CSV, mask, MAT or diagnostic files are created by saving results.
+Resume data and a copy of the source photo are stored inside the workbook, which
+still has only the Colonies and Summary tabs. This makes the workbook larger.
 
 The workbook's OriginalSuggestion column records the original classifier
 suggestion, which can differ from the current Label. **Label** controls the
 summary and annotated image. Manual marks record their source and parent ID.
+
+### Continue working on saved results
+
+Click **Open saved results** at the top right and select `<image>_colonies.xlsx`.
+Workbooks saved with this version reopen the saved image, boundary, settings,
+labels, excluded objects, added colonies and individually marked groups. Counts
+and circles appear immediately; detection is not rerun. The annotated PNG is
+not needed for reopening.
+
+Continue editing labels, add missed colonies, or undo previous individual marks.
+To tune the analysis, adjust settings and click **Apply and classify**. The
+existing rule for retaining corrections still applies: corrections are retained
+only when the relevant detected regions remain unchanged. Save again to create
+a new pair of files; the earlier pair is retained.
+
+The workbook includes the source photo, so new saves can move between computers
+without separately copying it. Reclassification of HEIC originals still requires
+the HEIC support described above. The embedded working image can be reviewed
+without decoding HEIC again. If the source photo was already unavailable when a
+workbook was saved, the app asks you to locate it.
+
+**Older workbooks:** the app asks for the original photo if it cannot find it
+beside the workbook or in Examples. It restores saved IDs, labels, circles and
+available settings, using the existing detector to recover matching regions.
+Unmatched saved circles become manual annotations. Older exports do not contain
+the full original segmentation, merge undo history or every setting, so those
+cannot be recovered exactly. The app reports this limitation after import.
+
+Keep the original app-generated workbook for resuming. Editing labels in its
+Colonies sheet is supported while the embedded session remains intact; changing
+IDs, positions or row counts is rejected. Other spreadsheet programs may remove
+embedded session data when they rewrite the file, making it an older-style import.
 
 ### Updating an older copy with the XML save error
 
