@@ -1,9 +1,38 @@
 # CFU Counter — AD9 / AD24
 
 Open **`launch_colony_app.m`** in MATLAB and click **Run**. Keep the `.m` helper
-files beside it. The app requires MATLAB and Image Processing Toolbox; it was
-tested with MATLAB R2025b on macOS. No Python, Statistics Toolbox, App Designer,
-MATLAB Compiler, or internet connection is needed to run it.
+files beside it. The app is written for MATLAB R2021a or later and was tested
+with MATLAB R2025b on macOS. Install the components below before using it.
+
+## Requirements and add-ons
+
+| Component | When it is needed |
+|---|---|
+| **[Image Processing Toolbox](https://www.mathworks.com/products/image-processing.html)** | Required for colony detection, classification and plate-boundary tools. Your MATLAB license must include this toolbox. |
+| **[MATLAB Support for HEIF/HEIC Image Format](https://www.mathworks.com/matlabcentral/fileexchange/176918-matlab-support-for-heif-heic-image-format)** | Required to open HEIC/HEIF photos using MATLAB's decoder, including on Windows/Linux; requires R2025a or later. Not needed for PNG/JPEG. The app also has a macOS conversion fallback. |
+| **[MATLAB Support for OpenJDK](https://www.mathworks.com/matlabcentral/fileexchange/180823-matlab-support-for-openjdk)** | Provides Java for **Open saved results** and the macOS HEIC fallback. Install it if MATLAB has no working Java runtime; an already configured compatible runtime is sufficient. The add-on is available from R2026a. |
+
+In MATLAB, open **Home → Add-Ons**, search for the exact names above and install
+the components you need. For OpenJDK on R2026a or later, run this after installing:
+
+```matlab
+jenv("-clear")
+```
+
+Then **restart MATLAB**. Verify that `usejava('jvm')` returns `1`; `version -java`
+shows the active Java runtime. If Open saved results reports that no Java runtime
+was found, complete this setup and retry. See the
+[MathWorks Java setup instructions](https://www.mathworks.com/help/matlab/matlab_external/configure-your-system-to-use-java.html).
+For earlier MATLAB releases, use a bundled runtime or a
+[compatible OpenJDK version](https://www.mathworks.com/support/requirements/openjdk.html)
+instead of the newer add-on. Starting in R2026b, MATLAB on Windows/Linux no longer
+includes Java automatically.
+
+See [the setup guide](README_APP.md#requirements-and-first-time-setup) for checks
+and HEIC alternatives. After installation, running the app needs no internet
+connection, Python, Statistics Toolbox, App Designer or MATLAB Compiler.
+
+## Use the app
 
 1. Open a color photograph. A locked yellow plate outline appears immediately.
 2. Use **Choose plate boundary** to adjust it, or **Fit to rim** to fit it.

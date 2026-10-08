@@ -6,10 +6,62 @@ Open **`launch_colony_app.m`** in MATLAB and click **Run**, or enter
 `launch_colony_app` from this folder. If you received `ColonyCounterApp.zip`,
 extract it first and keep its `.m` files together.
 
-The app is a MATLAB programmatic app. It requires Image Processing Toolbox,
-was tested in R2025b on macOS, and is written for R2021a or later. Older MATLAB
-releases and other operating systems have not received the same runtime audit.
-App Designer, MATLAB Compiler, Python and internet access are not required.
+The app is a MATLAB programmatic app, written for R2021a or later and tested
+in R2025b on macOS. Older MATLAB releases and other operating systems have not
+received the same runtime audit. Install the required components below first.
+After installation, App Designer, MATLAB Compiler, Python and internet access
+are not required to run it.
+
+## Requirements and first-time setup
+
+Open **Home → Add-Ons** in MATLAB and search for these exact names:
+
+| Component | Requirement |
+|---|---|
+| **[Image Processing Toolbox](https://www.mathworks.com/products/image-processing.html)** | Required for detecting/classifying colonies and finding/editing the plate boundary. It must be installed and available under your MATLAB license. |
+| **[MATLAB Support for HEIF/HEIC Image Format](https://www.mathworks.com/matlabcentral/fileexchange/176918-matlab-support-for-heif-heic-image-format)** | Needed for MATLAB to decode HEIC/HEIF originals on Windows/Linux (R2025a or later). PNG/JPEG images do not need this add-on. On macOS, the app can also use the system converter. |
+| **[MATLAB Support for OpenJDK](https://www.mathworks.com/matlabcentral/fileexchange/180823-matlab-support-for-openjdk)** | Needed if MATLAB has no working Java runtime. This app uses Java when opening saved workbooks and for its macOS HEIC conversion fallback. A compatible Java runtime that is already configured is sufficient. |
+
+### Check Image Processing Toolbox
+
+Run `ver('images')` in the Command Window. Image Processing Toolbox should be
+listed. If it is missing, install it through Add-Ons or your MATLAB installer.
+If your license does not include it, contact your institution's MATLAB license
+administrator.
+
+### Set up OpenJDK and fix the missing-Java error
+
+The OpenJDK add-on is available for R2026a and later. After installing it, run:
+
+```matlab
+jenv("-clear")
+```
+
+**Restart MATLAB**, then check:
+
+```matlab
+usejava('jvm')  % Must return 1 for Open saved results
+version -java  % Displays the active Java runtime
+```
+
+If Open saved results says it is attempting to execute Java code but no runtime
+was found, install/configure this add-on and restart MATLAB before retrying.
+The saved workbook itself does not need to be recreated for this error.
+
+For earlier releases, use MATLAB's bundled Java (where provided) or configure a
+supported OpenJDK version. R2026b and later Windows/Linux installations do not
+bundle Java. See the [release compatibility table](https://www.mathworks.com/support/requirements/openjdk.html)
+and [MathWorks setup instructions](https://www.mathworks.com/help/matlab/matlab_external/configure-your-system-to-use-java.html).
+The `jenv("-clear")` option is available starting in R2026a; see
+[`jenv` documentation](https://www.mathworks.com/help/matlab/ref/jenv.html) for older releases.
+
+### HEIC alternatives
+
+If your MATLAB release cannot use the HEIC add-on, export a copy of the photo
+as PNG or JPEG before opening it. On macOS, the app's system-converter fallback
+also works when Java is available. Reopening a new saved workbook for review
+uses its embedded working image, so HEIC decoding is only needed when opening
+or reclassifying the HEIC original.
 
 ## Images and the yellow boundary
 
@@ -20,8 +72,9 @@ used. Coordinates refer to the upright original-resolution photograph.
 
 On macOS, HEIC uses MATLAB's decoder if available, otherwise the built-in macOS
 converter; the temporary conversion is removed and the original is untouched.
-On Windows/Linux, HEIC requires a MATLAB release with HEIC support and its image
-format add-on. If the decoder is unavailable, convert a copy to PNG/JPEG first.
+On Windows/Linux, HEIC requires MATLAB R2025a or later and **MATLAB Support for
+HEIF/HEIC Image Format**, as described above. If the decoder is unavailable,
+convert a copy to PNG/JPEG first.
 
 A yellow outline appears immediately after loading. It is locked until you use
 one of the boundary controls:
