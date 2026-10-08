@@ -61,3 +61,8 @@ annotation PNGs, and saves only the same two files per input.
 
 See `validation/VALIDATION.md` for measured stress results and remaining limits.
 The 20 development photos are not held-out accuracy validation.
+
+The XLSX formatter uses `matlab.io.xml.dom.Parser` and `DOMWriter` explicitly,
+with SpreadsheetML namespaces on inserted elements. Empty insertion references
+use `appendChild`, because native DOM `insertBefore` requires an actual node.
+This avoids differences in the default `xmlread` engine across MATLAB releases.

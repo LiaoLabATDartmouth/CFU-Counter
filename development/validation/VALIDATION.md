@@ -1,5 +1,7 @@
 # Adaptive settings validation — 8 October 2026
 
+Subsequent compatibility correction: [XML_EXPORT_FIX.md](XML_EXPORT_FIX.md) documents the native XML save failure, its fix, and targeted verification. The earlier audit below tested the then-current MATLAB configuration.
+
 Final cleanup and regression audit: **100 checks passed**, plus a clean-ZIP native UI check. See [FINAL_AUDIT.md](FINAL_AUDIT.md) for current file locations, export fixes, and validation scope. The image-analysis algorithms and photo results below were unchanged by that cleanup.
 
 MATLAB R2025b on macOS, Image Processing Toolbox. This report supersedes the previous saved-photo-preset audit. No preset lookup remains in the app or counter. The same image-content rule was applied to all 20 originals (19 HEIC, one JPEG), selecting one main plate per image. The derived annotated PNG is excluded.

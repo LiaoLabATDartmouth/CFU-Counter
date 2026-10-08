@@ -1,5 +1,7 @@
 # Final software and project audit — 8 October 2026
 
+Subsequent compatibility correction: [XML_EXPORT_FIX.md](XML_EXPORT_FIX.md) documents the native XML save failure, its fix, and targeted verification. The earlier audit below tested the then-current MATLAB configuration.
+
 **100 regression checks passed; 0 failed; 0 incomplete.** The suite included
 all 20 original photographs. A separate native UI smoke check passed from a
 freshly extracted portable ZIP. No remaining software failures were found in

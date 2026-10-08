@@ -155,6 +155,23 @@ The workbook's OriginalSuggestion column records the original classifier
 suggestion, which can differ from the current Label. **Label** controls the
 summary and annotated image. Manual marks record their source and parent ID.
 
+### Updating an older copy with the XML save error
+
+If Save results reports `Invalid input for argument 3 (p1)` and mentions
+`matlab.io.xml.dom.Node`, update to the current app. The Excel formatter now
+uses a consistent native XML reader/writer and handles empty insertion points.
+
+To keep unsaved review edits in an app that is already open, replace only
+`format_colony_workbook.m` in the app folder you are using with the current
+GitHub version. Then run this in the MATLAB Command Window and retry Save results:
+
+```matlab
+clear format_colony_workbook
+```
+
+This clears the helper function from memory, not your open app or its counts.
+For a fresh installation, download and extract the updated app ZIP as usual.
+
 ## Files and sharing
 
 All root `.m` files belong to the runnable source package; keep them together.
