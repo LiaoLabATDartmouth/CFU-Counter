@@ -90,6 +90,20 @@ one of the boundary controls:
   excluded. The accepted region is not extrapolated to an entire plate.
 - **Show whole plate** returns from a close-up to the current plate view. It
   changes only zoom, not the counting boundary or labels.
+- The **split section control**, beside Show whole plate, has two equal halves:
+  click the left half for the **previous section** and the right half for the
+  **next section**. The labels stay **< Prev section** and **Next section >**;
+  the current section number appears in the status line and tooltips. The nine views form a
+  3-by-3 grid, numbered left to right across the top, middle and bottom rows.
+  They cover the entire visible plate without gaps and overlap slightly so
+  colonies at section edges remain easy to inspect. Navigation wraps between
+  sections 1 and 9 in either direction.
+  Click circles, edit labels, mark individual colonies, add missed colonies and
+  save results as usual; counts and saved outputs still cover the whole plate.
+  Show whole plate restarts the sequence: the right half opens section 1 and
+  the left half opens section 9. Colony close-ups and manual pan/zoom keep your
+  place, so either half continues from the last section. Loading a photo/workbook
+  or reclassifying starts a fresh sequence.
 
 If automatic plate detection fails, the app shows a centered initial ellipse
 and says that no plate was found. Position it manually or use Fit to rim; the

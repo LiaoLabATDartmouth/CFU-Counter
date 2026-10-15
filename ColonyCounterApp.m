@@ -62,6 +62,8 @@ classdef ColonyCounterApp < matlab.apps.AppBase
         ManualParameterNames = {}
         ResumeLease = []
         ResultsFolder = ""
+        SectionIndex = 0
+        SectionBounds = []
     end
     methods
         function app=ColonyCounterApp(imageFile,visibility)
@@ -236,9 +238,18 @@ classdef ColonyCounterApp < matlab.apps.AppBase
             end
             [limitsX,limitsY]=app.fittedViewLimits(ellipse);
             xlim(app.ImageAxes,limitsX); ylim(app.ImageAxes,limitsY);
+            app.resetSectionNavigation();
             if ~app.Dirty && ~isempty(app.Result)
                 app.setStatus('Whole plate view. Click a review row to inspect a colony.');
             end
+        end
+
+        function showNextSection(app)
+            app.stepSection(1);
+        end
+
+        function showPreviousSection(app)
+            app.stepSection(-1);
         end
 
         function choosePlateBoundary(app)
@@ -570,7 +581,7 @@ classdef ColonyCounterApp < matlab.apps.AppBase
                     'Tag','MarkDraft','HitTest','off','PickableParts','none');
                 text(app.ImageAxes,xy(k,1)+radius+1,xy(k,2),sprintf('%d',k), ...
                     'Color',color,'BackgroundColor',[0.05 0.05 0.05],'Margin',1,'FontWeight','bold', ...
-                    'Tag','MarkDraft','HitTest','off','PickableParts','none');
+                    'Tag','MarkDraft','HitTest','off','PickableParts','none','Clipping','on');
             end
         end
 
@@ -641,7 +652,8 @@ classdef ColonyCounterApp < matlab.apps.AppBase
             imagePanel=uipanel(root,'BackgroundColor','w','BorderType','line');
             imagePanel.Layout.Row=2; imagePanel.Layout.Column=1;
             imageGrid=uigridlayout(imagePanel,[5 1],'RowHeight',{36,32,'1x',30,26},'Padding',[12 12 12 8],'RowSpacing',6);
-            toolbar=uigridlayout(imageGrid,[1 4],'ColumnWidth',{'1x','1.5x','0.8x','1.2x'},'Padding',[0 0 0 0]);
+            toolbar=uigridlayout(imageGrid,[1 5],'ColumnWidth',{'1x','1.6x','0.75x','1.2x',200}, ...
+                'ColumnSpacing',6,'Padding',[0 0 0 0]);
             app.Buttons.Load=uibutton(toolbar,'Text','Open image','ButtonPushedFcn',@(~,~)app.openDialog());
             app.Buttons.Boundary=uibutton(toolbar,'Text','Choose plate boundary', ...
                 'ButtonPushedFcn',@(~,~)app.choosePlateBoundary(), ...
@@ -651,6 +663,13 @@ classdef ColonyCounterApp < matlab.apps.AppBase
             app.Buttons.WholePlate=uibutton(toolbar,'Text','Show whole plate', ...
                 'ButtonPushedFcn',@(~,~)app.showWholePlate(), ...
                 'Tooltip','Zoom out to show the selected plate. Keeps the boundary, settings and colony labels.');
+            sectionControl=uigridlayout(toolbar,[1 2],'ColumnWidth',{'1x','1x'}, ...
+                'ColumnSpacing',0,'Padding',[0 0 0 0]);
+            app.Buttons.PreviousSection=uibutton(sectionControl,'Text','< Prev section', ...
+                'ButtonPushedFcn',@(~,~)app.showPreviousSection());
+            app.Buttons.NextSection=uibutton(sectionControl,'Text','Next section >', ...
+                'ButtonPushedFcn',@(~,~)app.showNextSection());
+            app.resetSectionNavigation();
             app.BoundaryHint=uilabel(imageGrid,'Text','','WordWrap','on', ...
                 'FontSize',11,'FontColor',[0.4 0.45 0.52]);
             app.BoundaryHint.Layout.Row=2;
@@ -835,7 +854,7 @@ classdef ColonyCounterApp < matlab.apps.AppBase
             for name=fieldnames(app.Buttons)'
                 app.Buttons.(name{1}).Enable=app.onoff(active);
             end
-            for name={'Apply','Boundary','View','WholePlate'}
+            for name={'Apply','Boundary','View','WholePlate','PreviousSection','NextSection'}
                 app.Buttons.(name{1}).Enable=app.onoff(active && loaded);
             end
             app.Buttons.Save.Enable=app.onoff(active && ~isempty(app.Result) && ~app.Dirty);
@@ -912,6 +931,8 @@ classdef ColonyCounterApp < matlab.apps.AppBase
             for handle=reshape(ax.Children,1,[])
                 if isgraphics(handle,'image') || ismember(string(handle.Tag), ...
                         ["ColonyCircles","ColonyWarning","ColonyWarningOutline","ColonyID","SelectedColony"])
+                    % Text otherwise draws outside the axes when zoomed in.
+                    if isgraphics(handle,'text'), handle.Clipping='on'; end
                     handle.ButtonDownFcn=@(source,event)app.imageColonyClicked(source,event);
                 end
             end
@@ -920,6 +941,7 @@ classdef ColonyCounterApp < matlab.apps.AppBase
             else
                 [limitsX,limitsY]=app.fittedViewLimits(ellipse);
                 xlim(ax,limitsX); ylim(ax,limitsY);
+                app.resetSectionNavigation();
             end
         end
 
@@ -995,6 +1017,55 @@ classdef ColonyCounterApp < matlab.apps.AppBase
             if isstruct(app.EstimationInfo) && isfield(app.EstimationInfo,'ProposedEllipse')
                 ellipse=app.EstimationInfo.ProposedEllipse;
             end
+        end
+
+        function stepSection(app,direction)
+            % Change only the viewport; keep original image coordinates and
+            % graphics so all existing selection and editing tools still work.
+            if app.Busy || strlength(app.MarkingMode)>0 || isempty(app.ImageData), return; end
+            if ~isempty(app.BoundaryROI) && isvalid(app.BoundaryROI)
+                roi=app.BoundaryROI;
+                ellipse=[roi.Center roi.SemiAxes roi.RotationAngle];
+            else
+                ellipse=app.displayEllipse();
+            end
+            [wholeX,wholeY]=app.fittedViewLimits(ellipse);
+            bounds=[wholeX wholeY];
+            if ~isequal(bounds,app.SectionBounds), app.SectionIndex=0; end
+            app.SectionBounds=bounds;
+            if app.SectionIndex==0
+                if direction>0, app.SectionIndex=1; else, app.SectionIndex=9; end
+            else
+                app.SectionIndex=mod(app.SectionIndex-1+direction,9)+1;
+            end
+            row=floor((app.SectionIndex-1)/3)+1;
+            column=mod(app.SectionIndex-1,3)+1;
+            edgesX=linspace(wholeX(1),wholeX(2),4);
+            edgesY=linspace(wholeY(1),wholeY(2),4);
+            % A small overlap provides context for colonies at section edges.
+            padX=0.06*diff(wholeX)/3; padY=0.06*diff(wholeY)/3;
+            limitsX=[max(wholeX(1),edgesX(column)-padX),min(wholeX(2),edgesX(column+1)+padX)];
+            limitsY=[max(wholeY(1),edgesY(row)-padY),min(wholeY(2),edgesY(row+1)+padY)];
+            xlim(app.ImageAxes,limitsX); ylim(app.ImageAxes,limitsY);
+            app.Buttons.PreviousSection.Tooltip=sprintf( ...
+                'Current section: %d of 9 (row %d, column %d). Click for previous section %d.', ...
+                app.SectionIndex,row,column,mod(app.SectionIndex-2,9)+1);
+            app.Buttons.NextSection.Tooltip=sprintf( ...
+                'Current section: %d of 9 (row %d, column %d). Click for next section %d. Order: left to right, top to bottom.', ...
+                app.SectionIndex,row,column,mod(app.SectionIndex,9)+1);
+            app.setStatus(sprintf( ...
+                'Section %d/9 (row %d, column %d). Review and edit as usual; counts cover the whole plate. Use the left/right halves for the previous/next section.', ...
+                app.SectionIndex,row,column));
+        end
+
+        function resetSectionNavigation(app)
+            app.SectionIndex=0; app.SectionBounds=[];
+            app.Buttons.PreviousSection.Text='< Prev section';
+            app.Buttons.NextSection.Text='Next section >';
+            app.Buttons.PreviousSection.Tooltip= ...
+                'Previous section in the 3-by-3 grid. From whole plate, start at section 9 (bottom-right). All review tools remain available.';
+            app.Buttons.NextSection.Tooltip= ...
+                'Next section in the 3-by-3 grid. From whole plate, start at section 1 (top-left). All review tools remain available. Show whole plate restarts the sequence.';
         end
 
         function [limitsX,limitsY]=fittedViewLimits(app,ellipse)
